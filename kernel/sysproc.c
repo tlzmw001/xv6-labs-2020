@@ -96,5 +96,9 @@ sys_uptime(void)
   return xticks;
 }
 
-uint64 sys_trace(void) {
+uint64
+sys_trace(void) {
+  // argint检索的是第n个系统调用的参数，因此不包括系统调用本身，传入的参数为0
+  argint(0, &(myproc()->trace_mask));
+  return 0;
 }
