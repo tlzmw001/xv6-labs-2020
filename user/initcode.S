@@ -6,10 +6,10 @@
 # exec(init, argv)
 .globl start
 start:
-        la a0, init
-        la a1, argv
-        li a7, SYS_exec
-        ecall
+        la a0, init      # 将init中的地址加载到a0，a0用于存放返回值
+        la a1, argv      # argv中的地址加载到a1
+        li a7, SYS_exec  # exec系统调用对应的数字加载到a7
+        ecall            # 将控制权交给操作系统
 
 # for(;;) exit();
 exit:

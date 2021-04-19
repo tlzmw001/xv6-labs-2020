@@ -21,17 +21,17 @@ void
 start()
 {
   // set M Previous Privilege mode to Supervisor, for mret.
-  unsigned long x = r_mstatus();
-  x &= ~MSTATUS_MPP_MASK;
-  x |= MSTATUS_MPP_S;
-  w_mstatus(x);
+  unsigned long x = r_mstatus(); // 读取特权状态寄存器中先前模式位
+  x &= ~MSTATUS_MPP_MASK;        // x的前模式清0,其他位不变
+  x |= MSTATUS_MPP_S;            // 将前模式设为管理模式
+  w_mstatus(x);                  // 写入
 
   // set M Exception Program Counter to main, for mret.
   // requires gcc -mcmodel=medany
-  w_mepc((uint64)main);
+  w_mepc((uint64)main); //将main函数的地址写入寄存器mepc将返回地址设为main
 
   // disable paging for now.
-  w_satp(0);
+  w_satp(0); //向页表寄存器satp写入0来在管理模式下禁用虚拟地址转换
 
   // delegate all interrupts and exceptions to supervisor mode.
   w_medeleg(0xffff);
@@ -46,7 +46,7 @@ start()
   w_tp(id);
 
   // switch to supervisor mode and jump to main().
-  asm volatile("mret");
+  asm volatile("mret"); //由于前模式设为了管理模式，因此返回后将变为管理模式，并且进入main()
 }
 
 // set up to receive timer interrupts in machine mode,

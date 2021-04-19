@@ -135,9 +135,9 @@ syscall(void)
   int num;
   struct proc *p = myproc();
 
-  num = p->trapframe->a7;
+  num = p->trapframe->a7; //在initcode.S中可以看到a7中存放了系统调用对应的数字
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
-    p->trapframe->a0 = syscalls[num]();
+      p->trapframe->a0 = syscalls[num](); //在函数指针数组syscalls中索引对应的系统调用，a0被约定用于存放返回值，这句代码实际执行了系统调用
   } else {
     printf("%d %s: unknown sys call %d\n",
             p->pid, p->name, num);
