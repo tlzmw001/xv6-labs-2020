@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "sysinfo.h"
 
 uint64
 sys_exit(void)
@@ -103,7 +104,22 @@ sys_trace(void) {
   return 0;
 }
 
+extern void freebytes(uint64 *);
+extern void procnum(uint64 *);
 uint64
 sys_sysinfo(void){
+  // 暂存系统信息
+  struct sysinfo info;
+  freebytes(&(info.freemem));
+  procnum(&(info.nproc));
+
+  // 获取虚拟地址
+  uint64 destaddr;
+  argaddr(0,&destaddr);
+
+  //从kernel拷贝到user
+  if(copyout(myproc()->pagetable, destaddr, (char*)&info, sizeof info) < 0)
+    return -1;
+
   return 0;
 }

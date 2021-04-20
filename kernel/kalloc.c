@@ -9,7 +9,7 @@
 #include "riscv.h"
 #include "defs.h"
 
-void freerange(void *pa_start, void *pa_end);
+void freerange(void *pa_start, void *pa_end);  // 释放指定区间的内存
 
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
@@ -57,7 +57,7 @@ kfree(void *pa)
   r = (struct run*)pa;
 
   acquire(&kmem.lock);
-  r->next = kmem.freelist;
+  r->next = kmem.freelist;  //将当前内存快添加到链表头
   kmem.freelist = r;
   release(&kmem.lock);
 }
@@ -79,4 +79,18 @@ kalloc(void)
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
   return (void*)r;
+}
+
+// 获取剩余内存字节数
+void
+freebytes(uint64 *dest) {
+  *dest = 0;
+  struct run *p = kmem.freelist;  // 遍历指针
+
+  acquire(&kmem.lock);
+  while(p) {
+    *dest += PGSIZE;
+    p = p->next;
+  }
+  release(&kmem.lock);
 }
