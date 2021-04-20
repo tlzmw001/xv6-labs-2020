@@ -104,20 +104,20 @@ sys_trace(void) {
   return 0;
 }
 
-extern void freebytes(uint64 *);
-extern void procnum(uint64 *);
+extern uint64 freebytes(void);
+extern uint64 procnum(void);
 uint64
 sys_sysinfo(void){
   // 暂存系统信息
   struct sysinfo info;
-  freebytes(&(info.freemem));
-  procnum(&(info.nproc));
+  info.freemem = freebytes();
+  info.nproc = procnum();
 
   // 获取虚拟地址
   uint64 destaddr;
   argaddr(0,&destaddr);
 
-  //从kernel拷贝到user
+  // 从kernel拷贝到user
   if(copyout(myproc()->pagetable, destaddr, (char*)&info, sizeof info) < 0)
     return -1;
 

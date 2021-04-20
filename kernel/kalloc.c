@@ -82,15 +82,17 @@ kalloc(void)
 }
 
 // 获取剩余内存字节数
-void
-freebytes(uint64 *dest) {
-  *dest = 0;
+uint64
+freebytes(void) {
+  uint64 bytes = 0;
   struct run *p = kmem.freelist;  // 遍历指针
 
   acquire(&kmem.lock);
   while(p) {
-    *dest += PGSIZE;
+    bytes += PGSIZE;
     p = p->next;
   }
   release(&kmem.lock);
+
+  return bytes;
 }

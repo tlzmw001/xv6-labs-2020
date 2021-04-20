@@ -698,12 +698,13 @@ procdump(void)
 }
 
 // 获取进程数
-void
-procnum(uint64 *dest) {
-  *dest = 0;
+uint64
+procnum(void) {
+  int np = 0;
   struct proc *p;
-  for(p = proc; p < &proc[NPROC]; p++) {
+  for(p = proc; p < &proc[NPROC]; ++p) {
     if(p->state != UNUSED) 
-      (*dest)++;
+      ++np;
   }
+  return np;
 }
