@@ -43,3 +43,5 @@ void *memcpy(void *, const void *, uint);
 
 //实验添加的
 int trace(int);
+struct sysinfo;
+int sysinfo(struct sysinfo *);
