@@ -75,9 +75,9 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
     panic("walk");
 
   for(int level = 2; level > 0; level--) {
-    pte_t *pte = &pagetable[PX(level, va)];
+    pte_t *pte = &pagetable[PX(level, va)];  //提取9个比特位
     if(*pte & PTE_V) {
-      pagetable = (pagetable_t)PTE2PA(*pte);
+      pagetable = (pagetable_t)PTE2PA(*pte);  //获取下一级
     } else {
       if(!alloc || (pagetable = (pde_t*)kalloc()) == 0)
         return 0;
