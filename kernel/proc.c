@@ -758,31 +758,29 @@ pagetable_t proc_kpagetable()
       (ukvmmap(kpagetable, KERNBASE, KERNBASE, (uint64)etext - KERNBASE, PTE_R | PTE_X) == 0 && ++map_record) &&
       (ukvmmap(kpagetable, (uint64)etext, (uint64)etext, PHYSTOP - (uint64)etext, PTE_R | PTE_W) == 0 && ++map_record) &&
       ukvmmap(kpagetable, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X) == 0) //最后一个映射也通过后就已经成功
-  {
     return kpagetable;
-  }
-  else
+    
+  //映射失败后通过不加break的switch语句判断map_record的值来逆向解除已经成功的映射
+  switch (map_record) 
   {
-    switch (map_record) //映射失败后通过不加break的switch语句判断map_record的值来逆向解除已经成功的映射
-    {
-    case 6:
-      uvmunmap(kpagetable, (uint64)etext, (PHYSTOP - (uint64)etext) / PGSIZE, 0);
-    case 5:
-      uvmunmap(kpagetable, KERNBASE, ((uint64)etext - KERNBASE) / PGSIZE, 0);
-    case 4:
-      uvmunmap(kpagetable, PLIC, 0x400000 / PGSIZE, 0);
-    case 3:
-      uvmunmap(kpagetable, CLINT, 0x10000 / PGSIZE, 0);
-    case 2:
-      uvmunmap(kpagetable, VIRTIO0, 1, 0);
-    case 1:
-      uvmunmap(kpagetable, UART0, 1, 0);
-    default:
-      break;
-    }
-    uvmfree(kpagetable, 0);
-    return 0;
+  case 6:
+    uvmunmap(kpagetable, (uint64)etext, (PHYSTOP - (uint64)etext) / PGSIZE, 0);
+  case 5:
+    uvmunmap(kpagetable, KERNBASE, ((uint64)etext - KERNBASE) / PGSIZE, 0);
+  case 4:
+    uvmunmap(kpagetable, PLIC, 0x400000 / PGSIZE, 0);
+  case 3:
+    uvmunmap(kpagetable, CLINT, 0x10000 / PGSIZE, 0);
+  case 2:
+    uvmunmap(kpagetable, VIRTIO0, 1, 0);
+  case 1:
+    uvmunmap(kpagetable, UART0, 1, 0);
+  default:
+    break;
   }
+  
+  uvmfree(kpagetable, 0);
+  return 0;
 }
 
 /**
@@ -813,6 +811,7 @@ void kvmreloadhart(pagetable_t pagetable)
   sfence_vma();
 }
 
-int proc_kpagetable_set(struct proc *p)
+int proc_copypagetable_u2k(struct proc *p)
 {
+  return 0;
 }
