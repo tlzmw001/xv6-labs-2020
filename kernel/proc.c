@@ -812,3 +812,7 @@ void kvmreloadhart(pagetable_t pagetable)
   w_satp(MAKE_SATP(pagetable));
   sfence_vma();
 }
+
+int proc_kpagetable_set(struct proc *p)
+{
+}

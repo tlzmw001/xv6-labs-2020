@@ -108,11 +108,11 @@ void            yield(void);
 int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
-void proc_allocfail(struct proc *p);
-int ukvmmap(pagetable_t pagetable, uint64 va, uint64 pa, uint64 sz, int perm);
-pagetable_t proc_kpagetable();
-void proc_freekpagetable(struct proc *p);
-void kvmreloadhart(pagetable_t pagetable);
+void            proc_allocfail(struct proc *p);
+int             ukvmmap(pagetable_t pagetable, uint64 va, uint64 pa, uint64 sz, int perm);
+pagetable_t     proc_kpagetable();
+void            proc_freekpagetable(struct proc *p);
+void            kvmreloadhart(pagetable_t pagetable);
 
 // swtch.S
 void            swtch(struct context*, struct context*);
@@ -206,6 +206,10 @@ void            statsinc(void);
 
 // sprintf.c
 int             snprintf(char*, int, char*, ...);
+
+// vmprint.c
+int copyin_new(pagetable_t, char *, uint64, uint64);
+int copyinstr_new(pagetable_t, char *, uint64, uint64);
 
 #ifdef LAB_NET
 // pci.c
