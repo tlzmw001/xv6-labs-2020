@@ -21,6 +21,9 @@ static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
 
+// lab3 pgtbl新添加变量
+extern char etext[];
+
 // initialize the proc table at boot time.
 void
 procinit(void)
@@ -29,19 +32,8 @@ procinit(void)
   
   initlock(&pid_lock, "nextpid");
   for(p = proc; p < &proc[NPROC]; p++) {
-      initlock(&p->lock, "proc");
-
-      // Allocate a page for the process's kernel stack.
-      // Map it high in memory, followed by an invalid
-      // guard page.
-      char *pa = kalloc();
-      if(pa == 0)
-        panic("kalloc");
-      uint64 va = KSTACK((int) (p - proc));
-      kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
-      p->kstack = va;
+    initlock(&p->lock, "proc");
   }
-  kvminithart();
 }
 
 // Must be called with interrupts disabled,
@@ -116,10 +108,34 @@ found:
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
   if(p->pagetable == 0){
-    freeproc(p);
-    release(&p->lock);
+    proc_allocfail(p);
     return 0;
   }
+
+  // 初始化kpagetable
+  p->kpagetable = proc_kpagetable();
+  if (p->kpagetable == 0)
+  {
+    proc_allocfail(p);
+    return 0;
+  }
+
+  // Allocate a page for the process's kernel stack.
+  // Map it high in memory, followed by an invalid
+  // guard page.
+  char *pa = kalloc();
+  if (pa == 0)
+  {
+    proc_allocfail(p);
+    return 0;
+  }
+  uint64 va = KSTACK((int)(p - proc));
+  if (ukvmmap(p->kpagetable, va, (uint64)pa, PGSIZE, PTE_R | PTE_W) != 0) //在进程的内核页表中保存内核栈的映射
+  {
+    proc_allocfail(p);
+    return 0;
+  }
+  p->kstack = va;
 
   // Set up new context to start executing at forkret,
   // which returns to user space.
@@ -142,6 +158,9 @@ freeproc(struct proc *p)
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
+  if (p->kpagetable)
+    proc_freekpagetable(p);
+  p->kpagetable = 0;
   p->sz = 0;
   p->pid = 0;
   p->parent = 0;
@@ -473,7 +492,10 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+
+        kvmreloadhart(p->kpagetable); //写入进程的内核页表
         swtch(&c->context, &p->context);
+        kvminithart(); //恢复全局页表
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
@@ -696,4 +718,97 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+/**
+ * @brief proc_allocfail 分配进程失败后处理
+ * @param p 进程结构体
+ */
+void proc_allocfail(struct proc *p)
+{
+  freeproc(p);
+  release(&p->lock);
+}
+
+/**
+ * @brief ukvmmap 为进程的内核页表建立映射
+ * @return 0成功 -1失败
+ */
+int ukvmmap(pagetable_t pagetable, uint64 va, uint64 pa, uint64 sz, int perm)
+{
+  return mappages(pagetable, va, sz, pa, perm);
+}
+
+/**
+ * @brief proc_kpagetable 初始化进程的内核页表，进程初始化失败不应调用panic
+ * @return 初始化好的进程页表
+ */
+pagetable_t proc_kpagetable()
+{
+  //申请分配页表
+  pagetable_t kpagetable = uvmcreate();
+  if (kpagetable == 0)
+    return 0;
+
+  int map_record = 0; //记录ukvmmap映射成功的次数
+  if ((ukvmmap(kpagetable, UART0, UART0, PGSIZE, PTE_R | PTE_W) == 0 && ++map_record) &&
+      (ukvmmap(kpagetable, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W) == 0 && ++map_record) &&
+      (ukvmmap(kpagetable, CLINT, CLINT, 0x10000, PTE_R | PTE_W) == 0 && ++map_record) &&
+      (ukvmmap(kpagetable, PLIC, PLIC, 0x400000, PTE_R | PTE_W) == 0 && ++map_record) &&
+      (ukvmmap(kpagetable, KERNBASE, KERNBASE, (uint64)etext - KERNBASE, PTE_R | PTE_X) == 0 && ++map_record) &&
+      (ukvmmap(kpagetable, (uint64)etext, (uint64)etext, PHYSTOP - (uint64)etext, PTE_R | PTE_W) == 0 && ++map_record) &&
+      ukvmmap(kpagetable, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X) == 0) //最后一个映射也通过后就已经成功
+  {
+    return kpagetable;
+  }
+  else
+  {
+    switch (map_record) //映射失败后通过不加break的switch语句判断map_record的值来逆向解除已经成功的映射
+    {
+    case 6:
+      uvmunmap(kpagetable, (uint64)etext, (PHYSTOP - (uint64)etext) / PGSIZE, 0);
+    case 5:
+      uvmunmap(kpagetable, KERNBASE, ((uint64)etext - KERNBASE) / PGSIZE, 0);
+    case 4:
+      uvmunmap(kpagetable, PLIC, 0x400000 / PGSIZE, 0);
+    case 3:
+      uvmunmap(kpagetable, CLINT, 0x10000 / PGSIZE, 0);
+    case 2:
+      uvmunmap(kpagetable, VIRTIO0, 1, 0);
+    case 1:
+      uvmunmap(kpagetable, UART0, 1, 0);
+    default:
+      break;
+    }
+    uvmfree(kpagetable, 0);
+    return 0;
+  }
+}
+
+/**
+ * @brief proc_freekpagetable 释放进程的内核页表
+ * @param p 指定的进程
+ */
+void proc_freekpagetable(struct proc *p)
+{
+  uvmunmap(p->kpagetable, UART0, 1, 0);
+  uvmunmap(p->kpagetable, VIRTIO0, 1, 0);
+  uvmunmap(p->kpagetable, CLINT, 0x10000 / PGSIZE, 0);
+  uvmunmap(p->kpagetable, PLIC, 0x400000 / PGSIZE, 0);
+  uvmunmap(p->kpagetable, KERNBASE, ((uint64)etext - KERNBASE) / PGSIZE, 0);
+  uvmunmap(p->kpagetable, (uint64)etext, (PHYSTOP - (uint64)etext) / PGSIZE, 0);
+  uvmunmap(p->kpagetable, TRAMPOLINE, 1, 0);
+  //最后一个参数为1，需要同时释放内核栈的物理内存，在下次allocproc再次分配
+  uvmunmap(p->kpagetable, p->kstack, 1, 1);
+  uvmfree(p->kpagetable, 0);
+}
+
+/**
+ * @brief kvmreloadhart 向satp中重新写入页表
+ * @param pagetable 要写入的页表
+ */
+void kvmreloadhart(pagetable_t pagetable)
+{
+  w_satp(MAKE_SATP(pagetable));
+  sfence_vma();
 }

@@ -108,6 +108,11 @@ void            yield(void);
 int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
+void proc_allocfail(struct proc *p);
+int ukvmmap(pagetable_t pagetable, uint64 va, uint64 pa, uint64 sz, int perm);
+pagetable_t proc_kpagetable();
+void proc_freekpagetable(struct proc *p);
+void kvmreloadhart(pagetable_t pagetable);
 
 // swtch.S
 void            swtch(struct context*, struct context*);
