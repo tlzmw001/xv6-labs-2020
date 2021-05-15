@@ -383,24 +383,24 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 int
 copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
-  // return copyin_new(pagetable, dst, srcva, len);
-  uint64 n, va0, pa0;
+  return copyin_new(pagetable, dst, srcva, len);
+  // uint64 n, va0, pa0;
 
-  while(len > 0){
-    va0 = PGROUNDDOWN(srcva);
-    pa0 = walkaddr(pagetable, va0);
-    if(pa0 == 0)
-      return -1;
-    n = PGSIZE - (srcva - va0); //计算本页表内需要复制的长度
-    if (n > len)                //复制的长度只在一个页面中
-      n = len;
-    memmove(dst, (void *)(pa0 + (srcva - va0)), n);
+  // while(len > 0){
+  //   va0 = PGROUNDDOWN(srcva);
+  //   pa0 = walkaddr(pagetable, va0);
+  //   if(pa0 == 0)
+  //     return -1;
+  //   n = PGSIZE - (srcva - va0); //计算本页表内需要复制的长度
+  //   if (n > len)                //复制的长度只在一个页面中
+  //     n = len;
+  //   memmove(dst, (void *)(pa0 + (srcva - va0)), n);
 
-    len -= n;
-    dst += n;
-    srcva = va0 + PGSIZE;
-  }
-  return 0;
+  //   len -= n;
+  //   dst += n;
+  //   srcva = va0 + PGSIZE;
+  // }
+  // return 0;
 }
 
 // Copy a null-terminated string from user to kernel.
@@ -410,40 +410,41 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 int
 copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 {
-  uint64 n, va0, pa0;
-  int got_null = 0;
+  return copyinstr_new(pagetable, dst, srcva, max);
+  // uint64 n, va0, pa0;
+  // int got_null = 0;
 
-  while(got_null == 0 && max > 0){
-    va0 = PGROUNDDOWN(srcva);
-    pa0 = walkaddr(pagetable, va0);
-    if(pa0 == 0)
-      return -1;
-    n = PGSIZE - (srcva - va0);
-    if(n > max)
-      n = max;
+  // while(got_null == 0 && max > 0){
+  //   va0 = PGROUNDDOWN(srcva);
+  //   pa0 = walkaddr(pagetable, va0);
+  //   if(pa0 == 0)
+  //     return -1;
+  //   n = PGSIZE - (srcva - va0);
+  //   if(n > max)
+  //     n = max;
 
-    char *p = (char *) (pa0 + (srcva - va0));
-    while(n > 0){
-      if(*p == '\0'){
-        *dst = '\0';
-        got_null = 1;
-        break;
-      } else {
-        *dst = *p;
-      }
-      --n;
-      --max;
-      p++;
-      dst++;
-    }
+  //   char *p = (char *) (pa0 + (srcva - va0));
+  //   while(n > 0){
+  //     if(*p == '\0'){
+  //       *dst = '\0';
+  //       got_null = 1;
+  //       break;
+  //     } else {
+  //       *dst = *p;
+  //     }
+  //     --n;
+  //     --max;
+  //     p++;
+  //     dst++;
+  //   }
 
-    srcva = va0 + PGSIZE;
-  }
-  if(got_null){
-    return 0;
-  } else {
-    return -1;
-  }
+  //   srcva = va0 + PGSIZE;
+  // }
+  // if(got_null){
+  //   return 0;
+  // } else {
+  //   return -1;
+  // }
 }
 
 /**
@@ -480,4 +481,40 @@ void vmprint(pagetable_t pagetable)
 {
   printf("page table %p\n", pagetable);
   vmprint_r(pagetable, 2);
+}
+
+/**
+ * @brief kvmreloadhart 向satp中重新写入页表
+ * @param pagetable 要写入的页表
+ */
+void kvmreloadhart(pagetable_t pagetable)
+{
+  w_satp(MAKE_SATP(pagetable));
+  sfence_vma();
+}
+
+/**
+ * @brief pagemap 为指定的页表建立映射，相对于mappages，仅仅是参数顺序的改变
+ * @param pagetable 指定页表
+ * @param va 虚拟地址
+ * @param pa 物理地址
+ * @param sz 映射的地址大小
+ * @param perm 权限
+ * @return 0成功 -1失败
+ */
+int pagemap(pagetable_t pagetable, uint64 va, uint64 pa, uint64 sz, int perm)
+{
+  return mappages(pagetable, va, sz, pa, perm);
+}
+
+/**
+ * @brief ukvmfree 模拟uvmfree释放进程的内核页表，但不释放物理空间
+ * @param kpagetable 指定页表
+ * @param sz 大小
+ */
+void ukvmfree(pagetable_t kpagetable, uint64 sz)
+{
+  if (sz > 0)
+    uvmunmap(kpagetable, 0, PGROUNDUP(sz) / PGSIZE, 0); //在用户内存空间工作，所以虚拟地址起始为0
+  freewalk(kpagetable);
 }

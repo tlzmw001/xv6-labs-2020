@@ -47,8 +47,16 @@ sys_sbrk(void)
   if(argint(0, &n) < 0)
     return -1;
   addr = myproc()->sz;
+  if (addr + n >= PLIC)
+    return -1;
   if(growproc(n) < 0)
     return -1;
+  // addr中保存了之前进程的大小，经过growproc()后，进程结构体中的sz已经更改为目前的大小
+  if (proc_copypagetable_u2k(myproc()->kpagetable, myproc()->pagetable, addr, myproc()->sz) != myproc()->sz)
+  {
+    growproc(-n); //恢复初始状态
+    return -1;
+  }
   return addr;
 }
 

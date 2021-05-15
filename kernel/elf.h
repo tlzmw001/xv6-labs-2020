@@ -22,14 +22,15 @@ struct elfhdr {
 };
 
 // Program section header
+// 描述了必须加载到内存的节
 struct proghdr {
   uint32 type;
   uint32 flags;
   uint64 off;
   uint64 vaddr;
   uint64 paddr;
-  uint64 filesz;
-  uint64 memsz;
+  uint64 filesz; //文件大小
+  uint64 memsz;  //内存大小，filesz必须小于memsz，多出的部分用0填充
   uint64 align;
 };
 

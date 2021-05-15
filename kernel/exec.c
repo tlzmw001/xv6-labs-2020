@@ -35,7 +35,7 @@ exec(char *path, char **argv)
   if(elf.magic != ELF_MAGIC)
     goto bad;
 
-  if((pagetable = proc_pagetable(p)) == 0)
+  if ((pagetable = proc_pagetable(p)) == 0) // 分配一个未映射的页表
     goto bad;
 
   // Load program into memory.
@@ -71,7 +71,7 @@ exec(char *path, char **argv)
   if((sz1 = uvmalloc(pagetable, sz, sz + 2*PGSIZE)) == 0)
     goto bad;
   sz = sz1;
-  uvmclear(pagetable, sz-2*PGSIZE);
+  uvmclear(pagetable, sz - 2 * PGSIZE); // 为保护页清除PTE_U
   sp = sz;
   stackbase = sp - PGSIZE;
 
@@ -107,14 +107,21 @@ exec(char *path, char **argv)
     if(*s == '/')
       last = s+1;
   safestrcpy(p->name, last, sizeof(p->name));
-    
+
   // Commit to the user image.
   oldpagetable = p->pagetable;
   p->pagetable = pagetable;
   p->sz = sz;
+  proc_copypagetable_u2k(p->kpagetable, 0, oldsz, 0);                         //释放原来的内核页表
+  if (proc_copypagetable_u2k(p->kpagetable, p->pagetable, 0, p->sz) != p->sz) //重新建立映射
+    goto bad;
   p->trapframe->epc = elf.entry;  // initial program counter = main
   p->trapframe->sp = sp; // initial stack pointer
+
   proc_freepagetable(oldpagetable, oldsz);
+
+  if (p->pid == 1)
+    vmprint(p->pagetable);
 
   return argc; // this ends up in a0, the first argument to main(argc, argv)
 
