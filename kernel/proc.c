@@ -811,7 +811,7 @@ pagetable_t proc_kpagetable(struct proc *p)
     break;
   }
 
-  uvmfree(kpagetable, 0);
+  ukvmfree(kpagetable, 0);
   return 0;
 }
 
