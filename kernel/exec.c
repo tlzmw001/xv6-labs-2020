@@ -112,6 +112,8 @@ exec(char *path, char **argv)
   oldpagetable = p->pagetable;
   p->pagetable = pagetable;
   p->sz = sz;
+  // 下面这种先释放后分配的方法很大程度上节省了内存开销
+  // 如果仿照pagetable先分配新的再释放旧的的方法，很可能会造成内存不足！
   proc_copypagetable_u2k(p->kpagetable, 0, oldsz, 0);                         //释放原来的内核页表
   if (proc_copypagetable_u2k(p->kpagetable, p->pagetable, 0, p->sz) != p->sz) //重新建立映射
     goto bad;
