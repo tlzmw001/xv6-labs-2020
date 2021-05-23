@@ -4,7 +4,7 @@
 # 
 # Save current registers in old. Load from new.	
 
-
+# .globl表明可以被引用 .text表明是代码段
 .globl swtch
 swtch:
         sd ra, 0(a0)
