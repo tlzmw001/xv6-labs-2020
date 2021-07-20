@@ -2,5 +2,6 @@
     "files.associations": {
         "proc.h": "c",
         "cstdlib": "c"
-    }
+    },
+    "python.pythonPath": "/bin/python3"
 }

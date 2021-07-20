@@ -125,7 +125,7 @@ usertrapret(void)
   // switches to the user page table, restores user registers,
   // and switches to user mode with sret.
   uint64 fn = TRAMPOLINE + (userret - trampoline);
-  ((void (*)(uint64,uint64))fn)(TRAPFRAME, satp);
+  ((void (*)(uint64, uint64))fn)(TRAPFRAME, satp); // a0保存第一个参数，因此a0中存入了TRAPFRAME
 }
 
 // interrupts and exceptions from kernel code go here via kernelvec,

@@ -26,7 +26,7 @@ uservec:
         
 	# swap a0 and sscratch
         # so that a0 is TRAPFRAME
-        csrrw a0, sscratch, a0
+        csrrw a0, sscratch, a0 # 交换a0和sscratch，csrrw指令使得trap可以不更改任何寄存器完成指令
 
         # save the user registers in TRAPFRAME
         sd ra, 40(a0)
