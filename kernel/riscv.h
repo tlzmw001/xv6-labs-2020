@@ -311,6 +311,15 @@ r_ra()
   return x;
 }
 
+// 读取s0寄存器
+// 当前正在执行的函数的帧指针保存在s0寄存器
+static inline uint64
+r_fp() {
+  uint64 x;
+  asm volatile("mv %0, s0" : "=r" (x));
+  return x;
+}
+
 // flush the TLB.
 static inline void
 sfence_vma()
