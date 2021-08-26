@@ -95,3 +95,29 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_mmap(void) {
+  uint64 addr;
+  int length;
+  int prot;
+  int flags;
+  int fd;
+  int offset;
+  uint64 err = 0xffffffffffffffff;
+
+  if(argaddr(0, &addr) < 0 || argint(1, &length) < 0 || argint(2, &prot) < 0 ||
+    argint(3, &flags) < 0 || argint(4, &fd) < 0 || argint(5, &offset) < 0)
+    return err;
+  // 实验提示中假定addr和offset为0，简化程序可能发生的情况
+  if(addr != 0 || offset != 0)
+    return err;
+
+
+  return err;
+}
+
+uint64
+sys_munmap(void) {
+  return -1;
+}
