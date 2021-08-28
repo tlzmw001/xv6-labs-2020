@@ -363,7 +363,7 @@ exit(int status)
     }
   }
 
-  // 取消映射进程的已映射区域
+  // 将进程的已映射区域取消映射
   for(int i = 0; i < NVMA; ++i) {
     if(p->vma[i].used) {
       if(p->vma[i].flags == MAP_SHARED && (p->vma[i].prot & PROT_WRITE) != 0) {
